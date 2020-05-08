@@ -311,16 +311,18 @@ bool Context::enable_probe(const std::string &probe_name,
 bool Context::enable_probe(const std::string &provider_name,
                            const std::string &probe_name,
                            const std::string &fn_name) {
-  if (pid_stat_ && pid_stat_->is_stale())
+  if (pid_stat_ && pid_stat_->is_stale()) {
+    fprintf(stderr, "PID is stale");
     return false;
+  }
 
   Probe *found_probe = nullptr;
   for (auto &p : probes_) {
     if (p->name_ == probe_name &&
         (provider_name.empty() || p->provider() == provider_name)) {
       if (found_probe != nullptr) {
-        fprintf(stderr, "Two same-name probes (%s) but different providers\n",
-                probe_name.c_str());
+        fprintf(stderr, "Two same-name probes (%s) but different providers: '%s' and '%s'\n",
+                probe_name.c_str(), found_probe->provider().c_str(), p->provider().c_str());
         return false;
       }
       found_probe = p.get();
@@ -330,6 +332,11 @@ bool Context::enable_probe(const std::string &provider_name,
   if (found_probe != nullptr)
     return found_probe->enable(fn_name);
 
+  fprintf(stderr, "Probe not found: %s:%s\n", provider_name.c_str(), probe_name.c_str());
+  fprintf(stderr, "  Available probes:\n");
+  for (auto &p : probes_) {
+    fprintf(stderr, "    %s:%s\n", p->provider().c_str(), p->name_.c_str());
+  }
   return false;
 }
 
